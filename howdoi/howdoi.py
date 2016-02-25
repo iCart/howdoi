@@ -18,6 +18,10 @@ import requests_cache
 import sys
 from . import __version__
 
+import urllib3
+
+urllib3.disable_warnings()
+
 try:
     from urllib.parse import quote as url_quote
 except ImportError:
@@ -84,7 +88,12 @@ def get_proxies():
 
 def get_result(url):
     try:
-        return requests.get(url, headers={'User-Agent': random.choice(USER_AGENTS)}, proxies=get_proxies()).text
+        if os.getenv('HOWDOI_DISABLE_SSL'):
+            verify = False
+        else:
+            verify = True
+
+        return requests.get(url, headers={'User-Agent': random.choice(USER_AGENTS)}, proxies=get_proxies(), verify=verify).text
     except requests.exceptions.SSLError as e:
         print('[ERROR] Encountered an SSL Error. Try using HTTP instead of '
               'HTTPS by setting the environment variable "HOWDOI_DISABLE_SSL".\n')
@@ -146,6 +155,10 @@ def get_answer(args, links):
         return False
     if args.get('link'):
         return link
+
+#    if not link.startswith('http'):
+#        link = link.split('=', 1)[-1]
+
     page = get_result(link + '?answertab=votes')
     html = pq(page)
 
